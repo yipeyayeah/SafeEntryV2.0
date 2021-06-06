@@ -89,19 +89,21 @@ public class Main {
 
 		// Creation of objects
 		Transactions newTransaction = new Transactions();
+		InfectedLocations infectedLocation = new InfectedLocations();
 		boolean logout = false;
+		int choice = 0;
 		String message;
 		FamilyMembers familyMember = new FamilyMembers();
 		ArrayList<Transactions> transactionList = new ArrayList<Transactions>();
 		ArrayList<FamilyMembers> familyMembersList = new ArrayList<FamilyMembers>();
 		ArrayList<Transactions> familyTransList = new ArrayList<Transactions>();
-
+		ArrayList<InfectedLocations> infectedLocationList = new ArrayList<InfectedLocations>();
 
 		System.out.print("~~~~~~~~~~~~~~~~ Starting TraceTogether ~~~~~~~~~~~~~~~~ ");
 
 		while (true) {
 			System.out.println("\n\nSelect 1 for registration\nSelect 2 for login\nSelect 3 to exit\n");
-			int choice = cc.nextInt();
+			choice = cc.nextInt();
 			switch (choice) {
 			case 1:
 				Users newUser = createNewUserDialogue();
@@ -126,28 +128,80 @@ public class Main {
 						choice = cc.nextInt();
 						switch (choice) {
 						case 1:
-							System.out.println("\nSelf Check-in selected! Processing.....");
-							newTransaction = new Transactions(loginUser.getName(), loginUser.getNric(), "Compass One");
 
-							message = transactionController.selfCheckIn(newTransaction, TransactionsCollection)
-									? "Self Check-in success!"
-									: "Self Check-in failure!";
-							System.out.println(message);
+							if (loginUser.getUserType().equals("Officer")) {
+								infectedLocationList = infectedLocationsDataController
+										.retrieveAllInfectedLocations(infectedLocationsCollection);
+								if (infectedLocationList.isEmpty()) {
+									System.out.println("No infected locations found!");
+								} else {
+
+									for (int counter = 0; counter < infectedLocationList.size(); counter++) {
+										System.out.println(
+												"\n----------------Record " + (counter + 1) + "------------------");
+										System.out.println(
+												"Location: " + infectedLocationList.get(counter).getLocation());
+										System.out.println(
+												"Check-in time: " + infectedLocationList.get(counter).getCheckInTime());
+										System.out.println("Check-out time: "
+												+ infectedLocationList.get(counter).getCheckOutTime());
+									}
+
+								}
+							} else {
+								System.out.println("\nSelf Check-in selected! Processing.....");
+								newTransaction = new Transactions(loginUser.getName(), loginUser.getNric(),
+										"Compass One");
+
+								message = transactionController.selfCheckIn(newTransaction, TransactionsCollection)
+										? "Self Check-in success!"
+										: "Self Check-in failure!";
+								System.out.println(message);
+							}
+
 							break;
 
 						case 2:
-							System.out.println("\nSelf Check-out selected! Processing.....");
-							newTransaction = new Transactions(loginUser.getName(), loginUser.getNric(), "Compass One");
 
-							message = transactionController.selfCheckOut(newTransaction, TransactionsCollection)
-									? "Self Check-out success!"
-									: "Self Check-out failure!";
-							System.out.println(message);
+							if (loginUser.getUserType().equals("Officer")) {
+								System.out.println("Declare infected COVID location");
+								cc.nextLine();
+								System.out.print("\nEnter location visited by COVID-19 patient: ");
+								String location = cc.nextLine();
+
+								String checkInTime = "";
+								String checkInOut = "";
+								String regex = "^(3[01]|[12][0-9]|0[1-9])/(1[0-2]|0[1-9])/[0-9]{4} (2[0-3]|[01]?[0-9]):([0-5]?[0-9]):([0-5]?[0-9])$";
+								while (!checkInTime.matches(regex)) {
+									System.out.print("Enter check-in time(dd/MM/yyyy HH:mm:ss): ");
+									checkInTime = cc.nextLine();
+								}
+								while (!checkInOut.matches(regex)) {
+									System.out.print("Enter check-out time(dd/MM/yyyy HH:mm:ss): ");
+									checkInOut = cc.nextLine();
+								}
+								infectedLocation = new InfectedLocations(location, checkInTime, checkInOut);
+
+								message = infectedLocationsDataController.declareInfectedLocation(infectedLocation,
+										infectedLocationsCollection) ? "Record saved."
+												: "Record not saved successfully. Please try again!";
+								System.out.println(message);
+							} else {
+								System.out.println("\nSelf Check-out selected! Processing.....");
+								newTransaction = new Transactions(loginUser.getName(), loginUser.getNric(),
+										"Compass One");
+
+								message = transactionController.selfCheckOut(newTransaction, TransactionsCollection)
+										? "Self Check-out success!"
+										: "Self Check-out failure!";
+								System.out.println(message);
+							}
+
 							break;
 
 						case 3:
 							System.out.println("\nGroup Check-in selected! Processing.....");
-					
+
 							familyMembersList = familyMemberController.retrieveAllFamilyMembers(loginUser,
 									FamilyMembersCollection);
 							if (familyMembersList.isEmpty()) {
@@ -155,15 +209,16 @@ public class Main {
 							} else {
 								familyTransList.removeAll(familyTransList);
 								for (int counter = 0; counter < familyMembersList.size(); counter++) {
-									familyTransList.add(new Transactions(familyMembersList.get(counter).getName(), familyMembersList.get(counter).getNric(), "Compass One"));
+									familyTransList.add(new Transactions(familyMembersList.get(counter).getName(),
+											familyMembersList.get(counter).getNric(), "Compass One"));
 								}
-								
+
 								message = transactionController.groupCheckIn(familyTransList, TransactionsCollection)
 										? "Group Check-in success!"
 										: "Group Check-in failure!";
 								System.out.println(message);
 								System.out.println(message);
-							
+
 							}
 							break;
 
@@ -176,15 +231,16 @@ public class Main {
 							} else {
 								familyTransList.removeAll(familyTransList);
 								for (int counter = 0; counter < familyMembersList.size(); counter++) {
-									familyTransList.add(new Transactions(familyMembersList.get(counter).getName(), familyMembersList.get(counter).getNric(), "Compass One"));
+									familyTransList.add(new Transactions(familyMembersList.get(counter).getName(),
+											familyMembersList.get(counter).getNric(), "Compass One"));
 								}
-								
+
 								message = transactionController.groupCheckOut(familyTransList, TransactionsCollection)
 										? "Group Check-in success!"
 										: "Group Check-in failure!";
 								System.out.println(message);
 								System.out.println(message);
-								
+
 							}
 							break;
 						case 5:
@@ -205,36 +261,14 @@ public class Main {
 							if (message == null) {
 								System.out.print("No possible exposures.");
 							} else {
-								System.out.println( "\n------------- Possible exposure -------------\n"+message);
+								System.out.println("\n------------- Possible exposure -------------\n" + message);
 							}
 							break;
 
 						case 7:
 
 							if (loginUser.getUserType().equals("Officer")) {
-								System.out.println("Declare COVID location");
-								cc.nextLine();
-								System.out.print("\nEnter location visited by COVID-19 patient: ");
-								String location = cc.nextLine();
 
-								String checkInTime = "";
-								String checkInOut = "";
-								String regex = "^(3[01]|[12][0-9]|0[1-9])/(1[0-2]|0[1-9])/[0-9]{4} (2[0-3]|[01]?[0-9]):([0-5]?[0-9]):([0-5]?[0-9])$";
-								while (!checkInTime.matches(regex)) {
-									System.out.print("Enter check-in time(dd/MM/yyyy HH:mm:ss): ");
-									checkInTime = cc.nextLine();
-								}
-								while (!checkInOut.matches(regex)) {
-									System.out.print("Enter check-out time(dd/MM/yyyy HH:mm:ss): ");
-									checkInOut = cc.nextLine();
-								}
-								InfectedLocations infectedLocation = new InfectedLocations(location, checkInTime,
-										checkInOut);
-
-								message = infectedLocationsDataController.declareInfectedLocation(infectedLocation,
-										infectedLocationsCollection) ? "Record saved."
-												: "Record not saved successfully. Please try again!";
-								System.out.println(message);
 								break;
 							} else {
 								cc.nextLine();
@@ -256,9 +290,9 @@ public class Main {
 													: "Existing family member detected. Please try again!";
 									System.out.println(message);
 								}
-								break;
-							}
 
+							}
+							break;
 						case 8:
 
 							if (loginUser.getUserType().equals("Officer")) {
