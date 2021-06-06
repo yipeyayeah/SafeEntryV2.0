@@ -80,7 +80,7 @@ public class UsersDataController {
 
 
 			
-			String message = "\n------------- Possible exposure -------------\n";
+			String message = null;
 			DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
 
 			
@@ -110,7 +110,6 @@ public class UsersDataController {
 	
 			
 			}
-			System.out.println(message);
 			return message;
 
 		} catch (Exception e) {

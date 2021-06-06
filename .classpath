@@ -6,7 +6,7 @@
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/Bernie/OneDrive/Desktop/cloud/project/SafeEntryV2.0/lib/bson-4.2.3.jar"/>
-	<classpathentry kind="lib" path="C:/Users/Bernie/OneDrive/Desktop/cloud/project/SafeEntryV2.0/lib/mongo-java-driver-3.9.1.jar"/>
+	<classpathentry kind="lib" path="D:/Github Stuff/JavaProjects/SafeEntry/lib/bson-4.2.3.jar"/>
+	<classpathentry kind="lib" path="D:/Github Stuff/JavaProjects/SafeEntry/lib/mongo-java-driver-3.9.1.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -8,6 +8,8 @@ import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 
+import familyMembers.FamilyMembers;
+import familyMembers.FamilyMembersDataController;
 import infectedLocations.InfectedLocations;
 import infectedLocations.InfectedLocationsDataController;
 import transactions.Transactions;
@@ -15,8 +17,6 @@ import transactions.TransactionsDataController;
 import users.Users;
 import users.UsersDataController;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.logging.Level;
@@ -77,20 +77,25 @@ public class Main {
 		MongoDatabase db = mongoClient.getDatabase("SafeEntry");
 		MongoCollection<Users> usersCollection = db.getCollection("Users", Users.class);
 		MongoCollection<Transactions> TransactionsCollection = db.getCollection("Transactions", Transactions.class);
-		MongoCollection<InfectedLocations> infectedLocationCollection = db.getCollection("InfectedLocations",
+		MongoCollection<InfectedLocations> infectedLocationsCollection = db.getCollection("InfectedLocations",
 				InfectedLocations.class);
+		MongoCollection<FamilyMembers> FamilyMembersCollection = db.getCollection("FamilyMembers", FamilyMembers.class);
 
-		// Creation of Controllers & global variables
+		// Creation of Controllers
 		UsersDataController userController = new UsersDataController();
 		TransactionsDataController transactionController = new TransactionsDataController();
+		FamilyMembersDataController familyMemberController = new FamilyMembersDataController();
+		InfectedLocationsDataController infectedLocationsDataController = new InfectedLocationsDataController();
+
+		// Creation of objects
 		Transactions newTransaction = new Transactions();
 		boolean logout = false;
 		String message;
-		ArrayList<Transactions> familyList = new ArrayList<Transactions>();
-		Users Bernie = new Users("Bernie97", "S9722334B", "Password");
-		Users Clive = new Users("Clive", "S9722334B", "Password");
-		Users Nathan = new Users("Nathan", "S9722334B", "Password");
-		Users Clarence = new Users("Clarence", "S9722334B", "Password");
+		FamilyMembers familyMember = new FamilyMembers();
+		ArrayList<Transactions> transactionList = new ArrayList<Transactions>();
+		ArrayList<FamilyMembers> familyMembersList = new ArrayList<FamilyMembers>();
+		ArrayList<Transactions> familyTransList = new ArrayList<Transactions>();
+
 
 		System.out.print("~~~~~~~~~~~~~~~~ Starting TraceTogether ~~~~~~~~~~~~~~~~ ");
 
@@ -113,9 +118,9 @@ public class Main {
 					while (true) {
 
 						if (loginUser.getUserType().equals("Officer")) {
-							message = "\nEnter 1 for Self Check-in\nEnter 2 for Self Check-out\nEnter 3 for Group Check-in\nEnter 4 for Group Check-out\nEnter 5 to view history\nEnter 6 to view possible exposure\nEnter 7 to declare COVID location\nEnter 8 to log out";
+							message = "\nEnter 1 to view infected locations\nEnter 2 to declare infected COVID location\nEnter 3 to log out";
 						} else {
-							message = "\nEnter 1 for Self Check-in\nEnter 2 for Self Check-out\nEnter 3 for Group Check-in\nEnter 4 for Group Check-out\nEnter 5 to view history\nEnter 6 to view possible exposure\nEnter 7 to log out";
+							message = "\nEnter 1 for Self Check-in\nEnter 2 for Self Check-out\nEnter 3 for Group Check-in\nEnter 4 for Group Check-out\nEnter 5 to view history\nEnter 6 to view possible exposure\nEnter 7 to add new family member\nEnter 8 to delete existing family member\nEnter 9 to log out";
 						}
 						System.out.println(message);
 						choice = cc.nextInt();
@@ -142,34 +147,49 @@ public class Main {
 
 						case 3:
 							System.out.println("\nGroup Check-in selected! Processing.....");
-							familyList.removeAll(familyList);
-							familyList.add(new Transactions(Bernie.getName(), Bernie.getNric(), "Compass One"));
-							familyList.add(new Transactions(Clive.getName(), Clive.getNric(), "Compass One"));
-							familyList.add(new Transactions(Nathan.getName(), Nathan.getNric(), "Compass One"));
-							familyList.add(new Transactions(Clarence.getName(), Clarence.getNric(), "Compass One"));
-							message = transactionController.groupCheckIn(familyList, TransactionsCollection)
-									? "Group Check-in success!"
-									: "Group Check-in failure!";
-							System.out.println(message);
+					
+							familyMembersList = familyMemberController.retrieveAllFamilyMembers(loginUser,
+									FamilyMembersCollection);
+							if (familyMembersList.isEmpty()) {
+								System.out.println("No family member found!");
+							} else {
+								familyTransList.removeAll(familyTransList);
+								for (int counter = 0; counter < familyMembersList.size(); counter++) {
+									familyTransList.add(new Transactions(familyMembersList.get(counter).getName(), familyMembersList.get(counter).getNric(), "Compass One"));
+								}
+								
+								message = transactionController.groupCheckIn(familyTransList, TransactionsCollection)
+										? "Group Check-in success!"
+										: "Group Check-in failure!";
+								System.out.println(message);
+								System.out.println(message);
+							
+							}
 							break;
 
 						case 4:
 							System.out.println("\nGroup Check-out selected! Processing.....");
-							familyList.removeAll(familyList);
-							familyList.add(new Transactions(Bernie.getName(), Bernie.getNric(), "Compass One"));
-							familyList.add(new Transactions(Clive.getName(), Clive.getNric(), "Compass One"));
-							familyList.add(new Transactions(Nathan.getName(), Nathan.getNric(), "Compass One"));
-							familyList.add(new Transactions(Clarence.getName(), Clarence.getNric(), "Compass One"));
-							message = transactionController.groupCheckOut(familyList, TransactionsCollection)
-									? "Group Check-out in success!"
-									: "Group Check-out failure!";
-							System.out.println(message);
+							familyMembersList = familyMemberController.retrieveAllFamilyMembers(loginUser,
+									FamilyMembersCollection);
+							if (familyMembersList.isEmpty()) {
+								System.out.println("No family member found!");
+							} else {
+								familyTransList.removeAll(familyTransList);
+								for (int counter = 0; counter < familyMembersList.size(); counter++) {
+									familyTransList.add(new Transactions(familyMembersList.get(counter).getName(), familyMembersList.get(counter).getNric(), "Compass One"));
+								}
+								
+								message = transactionController.groupCheckOut(familyTransList, TransactionsCollection)
+										? "Group Check-in success!"
+										: "Group Check-in failure!";
+								System.out.println(message);
+								System.out.println(message);
+								
+							}
 							break;
-
 						case 5:
 							System.out.println("\nView history selected!\n");
-							ArrayList<Transactions> transactionList = transactionController.viewHistory(loginUser,
-									TransactionsCollection);
+							transactionList = transactionController.viewHistory(loginUser, TransactionsCollection);
 							for (int counter = 0; counter < transactionList.size(); counter++) {
 								System.out.println("----------------Record " + (counter + 1) + "------------------");
 								System.out.println("Location: " + transactionList.get(counter).getLocation());
@@ -179,12 +199,13 @@ public class Main {
 							}
 							break;
 						case 6:
+							System.out.println("\nView possible exposure selected!\n");
 							message = userController.notifyUser(loginUser, TransactionsCollection,
-									infectedLocationCollection);
+									infectedLocationsCollection);
 							if (message == null) {
-								System.out.println("No possible exposures.");
+								System.out.print("No possible exposures.");
 							} else {
-								System.out.println(message);
+								System.out.println( "\n------------- Possible exposure -------------\n"+message);
 							}
 							break;
 
@@ -209,28 +230,77 @@ public class Main {
 								}
 								InfectedLocations infectedLocation = new InfectedLocations(location, checkInTime,
 										checkInOut);
-								InfectedLocationsDataController infectedLocationsDataController = new InfectedLocationsDataController();
 
 								message = infectedLocationsDataController.declareInfectedLocation(infectedLocation,
-										infectedLocationCollection) ? "Record saved."
+										infectedLocationsCollection) ? "Record saved."
 												: "Record not saved successfully. Please try again!";
 								System.out.println(message);
+								break;
+							} else {
+								cc.nextLine();
+								String nric = "";
+								System.out.print("\nAdd new family member\nEnter name: ");
+								String name = cc.nextLine();
+								String regex = "^[STFG]\\d{7}[A-Z]$";
+								while (!nric.matches(regex)) {
+									System.out.print("Enter NRIC: ");
+									nric = cc.nextLine();
+								}
+								familyMember = new FamilyMembers(name, nric, loginUser.getName());
+								if (familyMemberController.checkExistingFamilyMember(familyMember,
+										FamilyMembersCollection)) {
+									System.out.println("Record exist, please try again.");
+								} else {
+									message = familyMemberController.addFamilyMembers(familyMember,
+											FamilyMembersCollection) ? "Family member saved."
+													: "Existing family member detected. Please try again!";
+									System.out.println(message);
+								}
+								break;
+							}
+
+						case 8:
+
+							if (loginUser.getUserType().equals("Officer")) {
+								break;
+							} else {
+								System.out.println("\nDelete family member selected");
+
+								familyMembersList = familyMemberController.retrieveAllFamilyMembers(loginUser,
+										FamilyMembersCollection);
+								if (familyMembersList.isEmpty()) {
+									System.out.println("No family member found!");
+								} else {
+									for (int counter = 0; counter < familyMembersList.size(); counter++) {
+										System.out.println(
+												"\n----------------Record " + (counter + 1) + "------------------");
+										System.out.println("Name: " + familyMembersList.get(counter).getName());
+										System.out.println("NRIC: " + familyMembersList.get(counter).getNric());
+									}
+									System.out.print("Select record to delete: ");
+									int record = cc.nextInt();
+
+									message = familyMemberController.removeFamilyMembers(
+											familyMembersList.get(record - 1), FamilyMembersCollection)
+													? "Record deleted."
+													: "Record not deleted successfully. Please try again!";
+									System.out.println(message);
+								}
+
+								break;
+							}
+						case 9:
+							if (loginUser.getUserType().equals("Officer")) {
 								break;
 							} else {
 								System.out.println("Logging out!");
 								logout = true;
 								break;
 							}
-
-						case 8:
-							System.out.println("Logging out!");
-							logout = true;
-							break;
 						default:
 							System.out.println("Invalid choice");
 						}
 						if (logout) {
-//							logout = false;
 							break;
 						}
 					}
