@@ -1,7 +1,14 @@
 import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
 import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
+
+import java.util.ArrayList;
+import java.util.Scanner;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.codecs.pojo.PojoCodecProvider;
+
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.client.MongoClients;
@@ -17,23 +24,28 @@ import transactions.TransactionsDataController;
 import users.Users;
 import users.UsersDataController;
 
-import java.util.ArrayList;
-import java.util.Scanner;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 public class Main {
-	// Scanner for user inputs
-	static Scanner cc = new Scanner(System.in);
+	// Creation of final variables
+	final static Scanner cc = new Scanner(System.in);
+	final static String nricRegex = "^[STFG]\\d{7}[A-Z]$";
+	final static String dateTimeRegex = "^(3[01]|[12][0-9]|0[1-9])/(1[0-2]|0[1-9])/[0-9]{4} (2[0-3]|[01]?[0-9]):([0-5]?[0-9]):([0-5]?[0-9])$";
 
-	// Display create new user dialogue with options
+	/**
+	 * Display create new user (User and Officer) dialogue with options. Perform
+	 * NRIC validation
+	 * 
+	 * @return new Users object.
+	 */
 	public static Users createNewUserDialogue() {
 		System.out.println("~~~~~~~~~~~~~~~~ Registration selected ~~~~~~~~~~~~~~~~ ");
-		String name = cc.nextLine();
+		cc.nextLine();
 		System.out.print("Enter Name: ");
-		name = cc.nextLine();
-		System.out.print("Enter NRIC: ");
-		String nric = cc.nextLine();
+		String nric = "";
+		String name = cc.nextLine();
+		while (!nric.matches(nricRegex)) {
+			System.out.print("Enter NRIC: ");
+			nric = cc.nextLine();
+		}
 		System.out.print("Enter Password: ");
 		String password = cc.nextLine();
 		System.out.print("Officer (Y/N): ");
@@ -90,28 +102,43 @@ public class Main {
 		// Creation of objects
 		Transactions newTransaction = new Transactions();
 		InfectedLocations infectedLocation = new InfectedLocations();
-		boolean logout = false;
-		int choice = 0;
-		String message;
 		FamilyMembers familyMember = new FamilyMembers();
+
+		// Creation of ArrayList to store objects
 		ArrayList<Transactions> transactionList = new ArrayList<Transactions>();
 		ArrayList<FamilyMembers> familyMembersList = new ArrayList<FamilyMembers>();
 		ArrayList<Transactions> familyTransList = new ArrayList<Transactions>();
 		ArrayList<InfectedLocations> infectedLocationList = new ArrayList<InfectedLocations>();
 
+		// Creation of user input
+		boolean logout = false;
+		int choice = 0;
+		String message;
+
 		System.out.print("~~~~~~~~~~~~~~~~ Starting TraceTogether ~~~~~~~~~~~~~~~~ ");
 
 		while (true) {
+
 			System.out.println("\n\nSelect 1 for registration\nSelect 2 for login\nSelect 3 to exit\n");
 			choice = cc.nextInt();
 			switch (choice) {
+
 			case 1:
+				//Creation of new user
 				Users newUser = createNewUserDialogue();
-				message = userController.createAccount(newUser, usersCollection) ? "User registration success."
-						: "User registration failure. Please try again";
-				System.out.println(message);
+				if (userController.checkExistingUser(newUser, usersCollection)) {
+					System.out.println("Existing user. Please login.");
+					
+				} else {
+					message = userController.createAccount(newUser, usersCollection) ? "User registration success."
+							: "User registration failure. Please try again";
+					System.out.println(message);
+
+				}
 				break;
+
 			case 2:
+				// Login function
 				Users loginUser = loginDialogue();
 				loginUser = userController.login(loginUser, usersCollection);
 				if (loginUser != null) {
@@ -127,8 +154,8 @@ public class Main {
 						System.out.println(message);
 						choice = cc.nextInt();
 						switch (choice) {
-						case 1:
 
+						case 1:
 							if (loginUser.getUserType().equals("Officer")) {
 								infectedLocationList = infectedLocationsDataController
 										.retrieveAllInfectedLocations(infectedLocationsCollection);
@@ -171,12 +198,12 @@ public class Main {
 
 								String checkInTime = "";
 								String checkInOut = "";
-								String regex = "^(3[01]|[12][0-9]|0[1-9])/(1[0-2]|0[1-9])/[0-9]{4} (2[0-3]|[01]?[0-9]):([0-5]?[0-9]):([0-5]?[0-9])$";
-								while (!checkInTime.matches(regex)) {
+
+								while (!checkInTime.matches(dateTimeRegex)) {
 									System.out.print("Enter check-in time(dd/MM/yyyy HH:mm:ss): ");
 									checkInTime = cc.nextLine();
 								}
-								while (!checkInOut.matches(regex)) {
+								while (!checkInOut.matches(dateTimeRegex)) {
 									System.out.print("Enter check-out time(dd/MM/yyyy HH:mm:ss): ");
 									checkInOut = cc.nextLine();
 								}
@@ -200,83 +227,99 @@ public class Main {
 							break;
 
 						case 3:
-							System.out.println("\nGroup Check-in selected! Processing.....");
 
-							familyMembersList = familyMemberController.retrieveAllFamilyMembers(loginUser,
-									FamilyMembersCollection);
-							if (familyMembersList.isEmpty()) {
-								System.out.println("No family member found!");
+							if (loginUser.getUserType().equals("Officer")) {
+								System.out.println("Logging out!");
+								logout = true;
 							} else {
-								familyTransList.removeAll(familyTransList);
-								for (int counter = 0; counter < familyMembersList.size(); counter++) {
-									familyTransList.add(new Transactions(familyMembersList.get(counter).getName(),
-											familyMembersList.get(counter).getNric(), "Compass One"));
+								System.out.println("\nGroup Check-in selected! Processing.....");
+
+								familyMembersList = familyMemberController.retrieveAllFamilyMembers(loginUser,
+										FamilyMembersCollection);
+								if (familyMembersList.isEmpty()) {
+									System.out.println("No family member found!");
+								} else {
+									familyTransList.removeAll(familyTransList);
+									for (int counter = 0; counter < familyMembersList.size(); counter++) {
+										familyTransList.add(new Transactions(familyMembersList.get(counter).getName(),
+												familyMembersList.get(counter).getNric(), "Compass One"));
+									}
+
+									message = transactionController.groupCheckIn(familyTransList,
+											TransactionsCollection) ? "Group Check-in success!"
+													: "Group Check-in failure!";
+									System.out.println(message);
+								
+
 								}
-
-								message = transactionController.groupCheckIn(familyTransList, TransactionsCollection)
-										? "Group Check-in success!"
-										: "Group Check-in failure!";
-								System.out.println(message);
-								System.out.println(message);
-
 							}
+
 							break;
 
 						case 4:
-							System.out.println("\nGroup Check-out selected! Processing.....");
-							familyMembersList = familyMemberController.retrieveAllFamilyMembers(loginUser,
-									FamilyMembersCollection);
-							if (familyMembersList.isEmpty()) {
-								System.out.println("No family member found!");
-							} else {
-								familyTransList.removeAll(familyTransList);
-								for (int counter = 0; counter < familyMembersList.size(); counter++) {
-									familyTransList.add(new Transactions(familyMembersList.get(counter).getName(),
-											familyMembersList.get(counter).getNric(), "Compass One"));
+
+							if (!loginUser.getUserType().equals("Officer")) {
+
+								System.out.println("\nGroup Check-out selected! Processing.....");
+								familyMembersList = familyMemberController.retrieveAllFamilyMembers(loginUser,
+										FamilyMembersCollection);
+								if (familyMembersList.isEmpty()) {
+									System.out.println("No family member found!");
+								} else {
+									familyTransList.removeAll(familyTransList);
+									for (int counter = 0; counter < familyMembersList.size(); counter++) {
+										familyTransList.add(new Transactions(familyMembersList.get(counter).getName(),
+												familyMembersList.get(counter).getNric(), "Compass One"));
+									}
+
+									message = transactionController.groupCheckOut(familyTransList,
+											TransactionsCollection) ? "Group Check-in success!"
+													: "Group Check-in failure!";
+									System.out.println(message);
+						
 								}
-
-								message = transactionController.groupCheckOut(familyTransList, TransactionsCollection)
-										? "Group Check-in success!"
-										: "Group Check-in failure!";
-								System.out.println(message);
-								System.out.println(message);
-
 							}
 							break;
+
 						case 5:
-							System.out.println("\nView history selected!\n");
-							transactionList = transactionController.viewHistory(loginUser, TransactionsCollection);
-							for (int counter = 0; counter < transactionList.size(); counter++) {
-								System.out.println("----------------Record " + (counter + 1) + "------------------");
-								System.out.println("Location: " + transactionList.get(counter).getLocation());
-								System.out.println("CheckInTime: " + transactionList.get(counter).getCheckInTime());
-								System.out.println(
-										"CheckOutTime: " + transactionList.get(counter).getCheckOutTime() + "\n");
+
+							if (!loginUser.getUserType().equals("Officer")) {
+								System.out.println("\nView history selected!\n");
+								transactionList = transactionController.viewHistory(loginUser, TransactionsCollection);
+								for (int counter = 0; counter < transactionList.size(); counter++) {
+									System.out
+											.println("----------------Record " + (counter + 1) + "------------------");
+									System.out.println("Location: " + transactionList.get(counter).getLocation());
+									System.out.println("CheckInTime: " + transactionList.get(counter).getCheckInTime());
+									System.out.println(
+											"CheckOutTime: " + transactionList.get(counter).getCheckOutTime() + "\n");
+								}
 							}
 							break;
+
 						case 6:
-							System.out.println("\nView possible exposure selected!\n");
-							message = userController.notifyUser(loginUser, TransactionsCollection,
-									infectedLocationsCollection);
-							if (message == null) {
-								System.out.print("No possible exposures.");
-							} else {
-								System.out.println("\n------------- Possible exposure -------------\n" + message);
+
+							if (!loginUser.getUserType().equals("Officer")) {
+								System.out.println("\nView possible exposure selected!\n");
+								message = userController.notifyUser(loginUser, TransactionsCollection,
+										infectedLocationsCollection);
+								if (message.equals("")) {
+									System.out.print("No possible exposures.\n");
+								} else {
+									System.out.println("\n------------- Possible exposure -------------\n" + message);
+								}
 							}
 							break;
 
 						case 7:
 
-							if (loginUser.getUserType().equals("Officer")) {
-
-								break;
-							} else {
+							if (!loginUser.getUserType().equals("Officer")) {
 								cc.nextLine();
 								String nric = "";
 								System.out.print("\nAdd new family member\nEnter name: ");
 								String name = cc.nextLine();
-								String regex = "^[STFG]\\d{7}[A-Z]$";
-								while (!nric.matches(regex)) {
+
+								while (!nric.matches(nricRegex)) {
 									System.out.print("Enter NRIC: ");
 									nric = cc.nextLine();
 								}
@@ -293,11 +336,10 @@ public class Main {
 
 							}
 							break;
+
 						case 8:
 
-							if (loginUser.getUserType().equals("Officer")) {
-								break;
-							} else {
+							if (!loginUser.getUserType().equals("Officer")) {
 								System.out.println("\nDelete family member selected");
 
 								familyMembersList = familyMemberController.retrieveAllFamilyMembers(loginUser,
@@ -321,16 +363,18 @@ public class Main {
 									System.out.println(message);
 								}
 
-								break;
 							}
+							break;
+
 						case 9:
-							if (loginUser.getUserType().equals("Officer")) {
-								break;
-							} else {
+
+							if (!loginUser.getUserType().equals("Officer")) {
 								System.out.println("Logging out!");
 								logout = true;
-								break;
+
 							}
+							break;
+
 						default:
 							System.out.println("Invalid choice");
 						}
@@ -342,7 +386,9 @@ public class Main {
 					System.out.println("Wrong credentials, please try again!");
 					break;
 				}
+
 			case 3:
+				//Restarting or exiting the program
 				if (logout) {
 					logout = false;
 					break;
